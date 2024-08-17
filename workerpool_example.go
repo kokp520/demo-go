@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	g "demoadi/workerpool"
+	g "demo-go/workerpool"
 )
 
 func main() {
