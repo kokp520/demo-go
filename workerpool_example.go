@@ -11,7 +11,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	wp := workerpool.NewWorkerPool(10)
+	wp := workerpool.NewWorkerPool(2)
 	go wp.Start()
 
 	// test1: 測試是否限制最大工作數量
@@ -23,10 +23,9 @@ func main() {
 			fmt.Printf("Order ID %d, Customer: %s, Amount: $%.2f\n", o.ID, o.Customer, o.Amount)
 		})
 	}
+	wp.Wait(){}
 	// 等待所有任务完成
 	// wp.Wait()
-
-	wp.Stop()
 
 	// test2: 測試 SubmitWait
 	// fmt.Println("開始測試 SubmitWait...")
@@ -66,7 +65,6 @@ func main() {
 	// }
 
 	// 等待所有工作完成
-
 	fmt.Println("所有測試已完成。")
 }
 

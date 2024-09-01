@@ -6,8 +6,18 @@ import (
 )
 
 type WorkerPool struct {
-	WorkerNum  int
-	JobChan    chan func()
+	// goroutine數量
+	WorkerNum int
+
+	// 即時分發，做即時回覆不堆積
+	JobChan chan func()
+
+	// 等待queue, 為了不卡住主程序，以及處理請求峰值的時候適當的分配工作
+	// 當所有工作都忙碌時會先暫時丟到這個queue，等有空位進行分發
+	// 請減少了jobchan分配的效能消耗
+	// todo: 先不實做，後續補上
+	// waitingQueue deque.Deque[func()]
+
 	workerChan chan func()
 	StopSignal chan struct{}
 	wg         sync.WaitGroup
@@ -18,7 +28,7 @@ func NewWorkerPool(workerNum int) *WorkerPool {
 	return &WorkerPool{
 		WorkerNum:  workerNum,
 		JobChan:    make(chan func()),
-		workerChan: make(chan func()),
+		workerChan: make(chan func(), workerNum),
 		StopSignal: make(chan struct{}),
 	}
 }
@@ -40,32 +50,37 @@ func (wp *WorkerPool) doWork(workerChan chan func(), wg *sync.WaitGroup) {
 }
 
 // Start initializes the worker pool and manages the worker lifecycle.
-func (wp *WorkerPool) Start() {
+func (p *WorkerPool) Start() {
 	var workerCount int
 	// timeout := time.NewTimer(2 * time.Second)
 	// defer timeout.Stop()
+
 	for {
 		select {
-		case job, ok := <-wp.JobChan:
+		case job, ok := <-p.JobChan:
 			if !ok {
 				// wp.stopAllWorkers(workerCount)
 				fmt.Println("JobChan closed. Exiting.")
 				return
 			}
 			select {
-			case wp.workerChan <- job:
+			case p.workerChan <- job:
 			default:
-				if workerCount < wp.WorkerNum {
+				if workerCount < p.WorkerNum {
 					fmt.Println("Got Job.. do worker")
-					wp.wg.Add(1)
-					go wp.doWork(wp.workerChan, &wp.wg)
+					p.wg.Add(1)
+					go p.doWork(p.workerChan, &p.wg)
 					workerCount++
+				} else {
+					// 處理請求峰值的時候適當的分配工作
+					// wating queue
+					// 先暫時都卡在jobChan中就好
 				}
 			}
-		case <-wp.StopSignal:
+		case <-p.StopSignal:
 			fmt.Println("Stop signal received.1111")
-			wp.wg.Wait()
-			close(wp.workerChan)
+			p.wg.Wait()
+			close(p.workerChan)
 			return
 			// case <-timeout.C:
 			// 	fmt.Printf("timeout...workerCount: %d, workerChan: %d\n", workerCount, len(wp.workerChan))
@@ -143,3 +158,8 @@ func (wp *WorkerPool) Status(workerCount int) {
 	println("workerChan:", len(wp.workerChan))
 	println("workerCount:", workerCount)
 }
+
+// WaitingQueueSize returns the count of tasks in the waiting queue.
+// func (p *WorkerPool) WaitingQueueSize() int {
+// 	return int(atomic.LoadInt32(&p.waiting))
+// }
