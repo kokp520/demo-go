@@ -8,6 +8,7 @@ import (
 	"demo-go/streamRequsetZeroSample/types/myapp/myservice"
 
 	"github.com/zeromicro/go-zero/core/logx"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type StreamRequestsLogic struct {
@@ -25,6 +26,7 @@ func NewStreamRequestsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *St
 }
 
 func (l *StreamRequestsLogic) StreamRequests(stream myservice.MyService_StreamRequestsServer) error {
+	trace := trace.SpanContextFromContext(l.ctx).TraceID().String()
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -36,7 +38,7 @@ func (l *StreamRequestsLogic) StreamRequests(stream myservice.MyService_StreamRe
 		}
 
 		// fmt.Printf("Received request: %s\n", req.Data)
-		logx.Infof("Received request: %s", req.Data)
+		logx.Infof("Received request: %s, trace: %s", req.Data, trace)
 
 		// 回應客戶端
 		err = stream.Send(&myservice.MyResponse{
