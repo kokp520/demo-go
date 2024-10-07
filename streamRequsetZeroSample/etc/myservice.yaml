@@ -1,0 +1,6 @@
+Name: myservice.rpc
+ListenOn: 0.0.0.0:50051
+Etcd:
+  Hosts:
+  - 127.0.0.1:2379
+  Key: myservice.rpc
