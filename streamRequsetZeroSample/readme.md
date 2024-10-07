@@ -8,3 +8,11 @@ go-zero服務測試不斷開連線的traceid是否相同
 goctl rpc protoc myservice.proto --go_out=./types --go-grpc_out=./types --zrpc_out=.
 ```
 
+#### run server 
+
+```
+go run myservice.go -f etc/myservice.yaml
+```
+
+
+go run client.go
